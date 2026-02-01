@@ -1,5 +1,5 @@
 {
-  "name": "Copenhague 2026",
+  "name": "Copenhague CRUCERO",
   "description": "Interactive guide for the Copenhagen 2026 cruise stop featuring itinerary, offline maps, audio guide, and budget tracker.",
   "requestFramePermissions": [
     "geolocation"

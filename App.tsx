@@ -78,7 +78,7 @@ const App: React.FC = () => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     };
 
-    const handleLocate = (coords: Coordinate, endCoords?: Coordinate) => {
+    const handleLocate = (coords: Coordinate) => {
         setMapFocus(coords);
         setActiveTab('map');
     };
