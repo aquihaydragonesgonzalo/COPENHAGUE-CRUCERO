@@ -66,7 +66,7 @@ const Timeline: React.FC<TimelineProps> = ({ itinerary, onToggleComplete, onLoca
 
     return (
         <div className="pb-32 px-4 pt-4 max-w-lg mx-auto h-full overflow-y-auto">
-            <h2 className="text-2xl font-bold text-fjord-500 mb-6">ITINERARIO COPENHAGUE</h2>
+            <h2 className="text-2xl font-bold text-fjord-500 mb-6">Itinerario Domingo</h2>
             
             <div className="relative border-l-2 border-fjord-200 ml-3">
                 {itinerary.map((act, index) => {
