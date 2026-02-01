@@ -249,7 +249,7 @@ export const INITIAL_ITINERARY: ItineraryItem[] = [
         instaTag: 'https://www.instagram.com/explore/locations/445732214/nyhavn/'
     },
     {
-        id: '5', title: 'Paseo por los Canales', startTime: '10:00', endTime: '11:15',
+        id: '5', title: 'Paseo por los Canales en Barco', startTime: '10:00', endTime: '11:15',
         locationName: 'Nyhavn', coords: COORDS.NYHAVN,
         description: 'Recorrido en barco por los canales (Stromma o Netto-Bådene).',
         keyDetails: 'Vistas únicas desde el agua. Relax total.',
