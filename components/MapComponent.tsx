@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
+import { Layers } from 'lucide-react';
 import { ItineraryItem, Coordinate } from '../types';
 import { WALKING_TRACK_COORDS, WALKING_ROUTE_POIS } from '../constants';
 
@@ -12,17 +13,47 @@ interface MapComponentProps {
 const MapComponent: React.FC<MapComponentProps> = ({ activities, userLocation, focusedLocation }) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstance = useRef<L.Map | null>(null);
+    const tileLayerRef = useRef<L.TileLayer | null>(null);
+    const [mapType, setMapType] = useState<'street' | 'satellite'>('street');
 
+    // Inicializar Mapa
     useEffect(() => {
         if(!mapRef.current) return;
         
         if(!mapInstance.current) {
             mapInstance.current = L.map(mapRef.current, { zoomControl: false }).setView([55.68, 12.58], 14);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; OpenStreetMap &copy; CARTO',
-                maxZoom: 19
-            }).addTo(mapInstance.current);
         }
+    }, []);
+
+    // Gestionar cambio de capa (Street vs Satellite)
+    useEffect(() => {
+        if(!mapInstance.current) return;
+        const map = mapInstance.current;
+
+        if(tileLayerRef.current) {
+            map.removeLayer(tileLayerRef.current);
+        }
+
+        const streetUrl = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+        const satelliteUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+        
+        const url = mapType === 'street' ? streetUrl : satelliteUrl;
+        const attribution = mapType === 'street' 
+            ? '&copy; OpenStreetMap &copy; CARTO' 
+            : 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community';
+
+        tileLayerRef.current = L.tileLayer(url, {
+            attribution,
+            maxZoom: 19
+        }).addTo(map);
+
+        tileLayerRef.current.bringToBack();
+
+    }, [mapType]);
+
+    // Gestionar Marcadores y Rutas
+    useEffect(() => {
+        if(!mapInstance.current) return;
         const map = mapInstance.current;
 
         const pinIcon = L.divIcon({
@@ -31,7 +62,7 @@ const MapComponent: React.FC<MapComponentProps> = ({ activities, userLocation, f
             iconSize: [12, 12]
         });
 
-        // Clear existing layers to avoid duplication
+        // Limpiar capas excepto el mapa base
         map.eachLayer((layer) => {
             if(layer instanceof L.Marker || layer instanceof L.Polyline) map.removeLayer(layer);
         });
@@ -85,7 +116,20 @@ const MapComponent: React.FC<MapComponentProps> = ({ activities, userLocation, f
 
     }, [activities, userLocation, focusedLocation]);
 
-    return <div ref={mapRef} className="w-full h-full z-0" />;
+    return (
+        <div className="relative w-full h-full">
+            <div ref={mapRef} className="w-full h-full z-0" />
+            
+            <button 
+                onClick={() => setMapType(prev => prev === 'street' ? 'satellite' : 'street')}
+                className="absolute top-4 right-4 z-[400] bg-white p-2.5 rounded-xl shadow-lg border border-slate-200 text-fjord-700 hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-2"
+                title="Cambiar tipo de mapa"
+            >
+                <Layers size={20} />
+                <span className="text-xs font-bold">{mapType === 'street' ? 'Satélite' : 'Mapa'}</span>
+            </button>
+        </div>
+    );
 };
 
 export default MapComponent;
