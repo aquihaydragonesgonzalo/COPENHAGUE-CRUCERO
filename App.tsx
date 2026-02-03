@@ -102,7 +102,7 @@ const App: React.FC = () => {
                 {activeTab === 'timeline' && <Timeline itinerary={itinerary} onToggleComplete={toggleComplete} onLocate={handleLocate} userLocation={userLocation} />}
                 {activeTab === 'map' && <MapComponent activities={itinerary} userLocation={userLocation} focusedLocation={mapFocus} />}
                 {activeTab === 'budget' && <Budget itinerary={itinerary} />}
-                {activeTab === 'guide' && <Guide userLocation={userLocation} />}
+                {activeTab === 'guide' && <Guide userLocation={userLocation} itinerary={itinerary} />}
             </main>
 
             <nav className="bg-white border-t border-slate-200 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] z-30 pb-safe shrink-0">

@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { 
-    AlertTriangle, Anchor, Camera, Thermometer, Sun, Moon, CloudRain, Volume2, Languages 
+    AlertTriangle, Anchor, Camera, Thermometer, Sun, Moon, CloudRain, Volume2, Languages, FileText, Download 
 } from 'lucide-react';
-import { Coordinate, HourlyForecast, DailyForecast, WeatherData } from '../types';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { Coordinate, HourlyForecast, DailyForecast, WeatherData, ItineraryItem } from '../types';
 import { DANISH_WORDS } from '../constants';
 import SharedFooter from './SharedFooter';
 
 interface GuideProps {
     userLocation: Coordinate | null;
+    itinerary: ItineraryItem[];
 }
 
-const Guide: React.FC<GuideProps> = ({ userLocation }) => {
+const Guide: React.FC<GuideProps> = ({ userLocation, itinerary }) => {
     const [weather, setWeather] = useState<WeatherData | null>(null);
     const [forecast, setForecast] = useState<DailyForecast[] | null>(null);
     const [hourly, setHourly] = useState<HourlyForecast[]>([]);
@@ -101,9 +104,130 @@ const Guide: React.FC<GuideProps> = ({ userLocation }) => {
         window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
     };
 
+    const cleanText = (text: string) => {
+        if (!text) return '';
+        return text
+            .replace(/€/g, 'EUR')
+            .replace(/➜/g, '->')
+            .replace(/⚠️/g, '[!]')
+            .replace(/[^\x20-\x7E\xA0-\xFF\n\r]/g, '') // Eliminar caracteres no Latin-1 (emojis, etc)
+            .trim();
+    };
+
+    const generatePDF = () => {
+        const doc = new jsPDF();
+        
+        // Cabecera
+        doc.setFillColor(14, 165, 233); 
+        doc.rect(0, 0, 210, 35, 'F');
+        
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(22);
+        doc.setTextColor(255, 255, 255);
+        doc.text("Copenhague 2026", 14, 18);
+        
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(12);
+        doc.text("Itinerario de Crucero - 10 de Mayo", 14, 26);
+        
+        doc.setTextColor(100);
+        doc.setFontSize(9);
+        doc.text(`Generado: ${new Date().toLocaleDateString()}`, 150, 26);
+
+        const tableColumn = ["Hora", "Actividad", "Ubicacion", "Notas"];
+        const tableRows: any[] = [];
+
+        itinerary.forEach(item => {
+            let activityContent = cleanText(item.title);
+            if (item.description) {
+                activityContent += `\n\n${cleanText(item.description)}`;
+            }
+
+            let locationContent = cleanText(item.locationName);
+            if (item.endLocationName) {
+                locationContent += ` -> ${cleanText(item.endLocationName)}`;
+            }
+
+            let detailsContent = cleanText(item.keyDetails);
+            if (item.priceDKK > 0) {
+                detailsContent += `\nCoste: ${item.priceDKK} DKK (~${item.priceEUR} EUR)`;
+            }
+            
+            if (item.notes === 'CRITICAL') {
+                detailsContent += `\n[!] IMPORTANTE: RIESGO DE PERDER BARCO.`;
+            } else if (item.notes) {
+                detailsContent += `\nNota: ${cleanText(item.notes)}`;
+            }
+
+            if (item.ticketUrl) {
+                detailsContent += `\n(Requiere Ticket)`;
+            }
+
+            tableRows.push([
+                `${item.startTime}\n${item.endTime}`,
+                activityContent,
+                locationContent,
+                detailsContent
+            ]);
+        });
+
+        autoTable(doc, {
+            head: [tableColumn],
+            body: tableRows,
+            startY: 40,
+            theme: 'grid',
+            headStyles: { 
+                fillColor: [14, 165, 233],
+                textColor: 255,
+                fontStyle: 'bold',
+                halign: 'center'
+            },
+            columnStyles: {
+                0: { cellWidth: 15, halign: 'center', valign: 'middle', fontStyle: 'bold' },
+                1: { cellWidth: 'auto' }, 
+                2: { cellWidth: 35 }, 
+                3: { cellWidth: 50, fontSize: 8 }
+            },
+            styles: { 
+                font: "helvetica",
+                fontSize: 9, 
+                cellPadding: 3,
+                overflow: 'linebreak',
+                valign: 'top',
+                textColor: 20
+            },
+            alternateRowStyles: { 
+                fillColor: [245, 250, 255] 
+            },
+            didParseCell: function(data) {
+                if (data.column.index === 3 && (data.cell.raw as string).includes('[!]')) {
+                    data.cell.styles.textColor = [220, 38, 38];
+                    data.cell.styles.fontStyle = 'bold';
+                }
+            }
+        });
+
+        const pageCount = (doc as any).internal.getNumberOfPages();
+        for(let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(150);
+            doc.text(`Pagina ${i} de ${pageCount}`, 105, 290, { align: 'center' });
+        }
+
+        doc.save("Copenhague_2026_Full.pdf");
+    };
+
     return (
         <div className="pb-32 px-4 pt-6 max-w-lg mx-auto h-full overflow-y-auto">
             <h2 className="text-2xl font-bold text-fjord-500 mb-6">Guía y Herramientas</h2>
+
+            <button 
+                onClick={generatePDF} 
+                className="w-full bg-slate-800 text-white font-bold py-3 rounded-xl shadow-lg flex items-center justify-center mb-6 hover:bg-slate-900 transition-colors"
+            >
+                <FileText className="mr-2" /> Descargar Itinerario (PDF)
+            </button>
 
             <div className="grid grid-cols-2 gap-3 mb-6">
                     <button onClick={handleSOS} className="bg-red-600 text-white font-bold py-3 rounded-xl shadow-lg flex items-center justify-center animate-pulse">
