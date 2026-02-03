@@ -12,6 +12,18 @@ export const calculateDistance = (coord1: Coordinate | null, coord2: Coordinate 
     return R * c;
 };
 
+export const calculateBearing = (start: Coordinate, end: Coordinate): number => {
+    const startLat = start.lat * Math.PI / 180;
+    const startLng = start.lng * Math.PI / 180;
+    const endLat = end.lat * Math.PI / 180;
+    const endLng = end.lng * Math.PI / 180;
+    const y = Math.sin(endLng - startLng) * Math.cos(endLat);
+    const x = Math.cos(startLat) * Math.sin(endLat) -
+            Math.sin(startLat) * Math.cos(endLat) * Math.cos(endLng - startLng);
+    const θ = Math.atan2(y, x);
+    return (θ * 180 / Math.PI + 360) % 360; 
+};
+
 export const calculateDuration = (startStr: string, endStr: string): string => {
     const [startH, startM] = startStr.split(':').map(Number);
     const [endH, endM] = endStr.split(':').map(Number);

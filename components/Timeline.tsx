@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { 
     Clock, MapPin, Map as MapIcon, Ticket, Headphones, Play, Square,
-    CheckCircle2, Circle, AlertTriangle, Instagram
+    CheckCircle2, Circle, AlertTriangle, Instagram, Navigation
 } from 'lucide-react';
 import { ItineraryItem, Coordinate } from '../types';
 import { AUDIO_PLAYLISTS } from '../constants';
-import { calculateDuration, calculateGap, calculateDistance } from '../utils';
+import { calculateDuration, calculateGap, calculateDistance, calculateBearing } from '../utils';
 import SharedFooter from './SharedFooter';
 
 interface TimelineProps {
@@ -76,9 +76,14 @@ const Timeline: React.FC<TimelineProps> = ({ itinerary, onToggleComplete, onLoca
                     const gap = prevAct ? calculateGap(prevAct.endTime, act.startTime) : 0;
                     
                     let distStr = "";
+                    let bearing = 0;
+                    
                     if (userLocation) {
-                        const dist = calculateDistance(userLocation, act.coords);
-                        distStr = dist > 1000 ? `a ${(dist/1000).toFixed(1)} km` : `a ${Math.round(dist)} m`;
+                        // Priorizar endCoords si existe, si no usar coords
+                        const targetCoords = act.endCoords || act.coords;
+                        const dist = calculateDistance(userLocation, targetCoords);
+                        distStr = dist > 1000 ? `${(dist/1000).toFixed(1)} km` : `${Math.round(dist)} m`;
+                        bearing = calculateBearing(userLocation, targetCoords);
                     }
 
                     return (
@@ -132,12 +137,21 @@ const Timeline: React.FC<TimelineProps> = ({ itinerary, onToggleComplete, onLoca
                                         </div>
                                     </div>
                                     
-                                    <div className="flex items-center text-sm text-gray-600 mb-3 gap-2">
+                                    <div className="flex items-center text-sm text-gray-600 mb-3 gap-2 flex-wrap">
                                             <span className="flex items-center truncate max-w-[150px]">
                                                 <MapPin size={14} className="mr-1 text-fjord-500"/>
                                                 {act.locationName}
                                             </span>
-                                            {distStr && <span className="text-xs text-fjord-600 font-bold bg-fjord-50 px-1.5 py-0.5 rounded border border-fjord-100">{distStr}</span>}
+                                            {distStr && (
+                                                <div className="flex items-center gap-1 text-xs text-fjord-600 font-bold bg-fjord-50 px-2 py-0.5 rounded-full border border-fjord-200">
+                                                    <Navigation 
+                                                        size={12} 
+                                                        style={{ transform: `rotate(${bearing}deg)` }} 
+                                                        className="fill-current text-fjord-700" 
+                                                    />
+                                                    <span>{distStr}</span>
+                                                </div>
+                                            )}
                                     </div>
 
                                     <div className="bg-slate-50 p-3 rounded text-sm text-slate-700 italic border-l-4 border-sunset-500 mb-3">
