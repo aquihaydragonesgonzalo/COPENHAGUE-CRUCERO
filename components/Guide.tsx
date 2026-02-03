@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
-    AlertTriangle, Anchor, Camera, Thermometer, Sun, Moon, CloudRain, Volume2, Languages, FileText, Download 
+    AlertTriangle, Anchor, Camera, Thermometer, Sun, Moon, CloudRain, Volume2, Languages, FileText
 } from 'lucide-react';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Coordinate, HourlyForecast, DailyForecast, WeatherData, ItineraryItem } from '../types';
 import { DANISH_WORDS } from '../constants';
@@ -110,7 +110,7 @@ const Guide: React.FC<GuideProps> = ({ userLocation, itinerary }) => {
             .replace(/€/g, 'EUR')
             .replace(/➜/g, '->')
             .replace(/⚠️/g, '[!]')
-            .replace(/[^\x20-\x7E\xA0-\xFF\n\r]/g, '') // Eliminar caracteres no Latin-1 (emojis, etc)
+            .replace(/[^\x20-\x7E\xA0-\xFF\n\r]/g, '')
             .trim();
     };
 
