@@ -14,7 +14,16 @@ export const COORDS: Record<string, Coordinate> = {
     STROGET_CENTER: { lat: 55.6793, lng: 12.5760 },
     RUNDETAARN: { lat: 55.68136, lng: 12.57572 },
     ROSENBORG: { lat: 55.68598, lng: 12.57748 },
-    NORREPORT: { lat: 55.6833, lng: 12.5715 }
+    NORREPORT: { lat: 55.6833, lng: 12.5715 },
+    METRO_GAMMEL_STRAND: { lat: 55.677595, lng: 12.578928 },
+    NYHAVN_ANCHOR: { lat: 55.680386, lng: 12.589195 },
+    ROSENBORG_CASTLE: { lat: 55.685716, lng: 12.57741 },
+    METRO_ORIENTKAJ: { lat: 55.711837, lng: 12.595177 },
+    METRO_OSTERPORT: { lat: 55.692879, lng: 12.58592 },
+    METRO_NORREPORT: { lat: 55.683847, lng: 12.572762 },
+    METRO_MARMORKIRKEN: { lat: 55.685127, lng: 12.58903 },
+    SALIDA_JARDINES: { lat: 55.684887, lng: 12.582509 },
+    ENTRADA_JARDINES: { lat: 55.686845, lng: 12.577232 }
 };
 
 export const AUDIO_PLAYLISTS: Record<string, AudioTrack[]> = {
@@ -296,8 +305,8 @@ export const INITIAL_ITINERARY: ItineraryItem[] = [
     },
     {
         id: '10', title: 'Regreso al Barco desde METRO Marmorkirken', startTime: '16:30', endTime: '17:30',
-        locationName: 'Nørreport/Kongens Nytorv', endLocationName: 'Oceankaj',
-        coords: COORDS.NORREPORT, endCoords: COORDS.OCEANKAJ,
+        locationName: 'METRO MARMORKIRKEN', endLocationName: 'OCEANKAJ',
+        coords: COORDS.METRO_MARMORKIRKEN, endCoords: COORDS.OCEANKAJ,
         description: 'Metro M4 hasta Orientkaj + Bus 164.',
         keyDetails: '¡Cuidado con el Bus 164 en domingo! Sal con margen.',
         googleMapsUrl: 'https://maps.app.goo.gl/jU8K6UnsEPJYYtbi8',
