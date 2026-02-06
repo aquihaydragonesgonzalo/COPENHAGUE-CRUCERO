@@ -3,6 +3,7 @@ import { Coordinate, ItineraryItem, AudioTrack, WalkingPOI, DanishWord } from '.
 export const SHIP_DEPARTURE_TIME = "18:00";
 export const SHIP_ONBOARD_TIME = "17:30";
 export const STORAGE_KEY = 'cph_guide_final_v21_shuttle_fix'; 
+export const CUSTOM_WAYPOINTS_KEY = 'cph_custom_waypoints_user_v1';
 
 export const COORDS: Record<string, Coordinate> = {
     OCEANKAJ: { lat: 55.7161, lng: 12.6015 },

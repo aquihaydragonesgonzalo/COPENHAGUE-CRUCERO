@@ -4,8 +4,15 @@ import Timeline from './components/Timeline';
 import MapComponent from './components/MapComponent';
 import Budget from './components/Budget';
 import Guide from './components/Guide';
-import { INITIAL_ITINERARY, SHIP_DEPARTURE_TIME, SHIP_ONBOARD_TIME, STORAGE_KEY } from './constants';
-import { ItineraryItem, Coordinate } from './types';
+import { INITIAL_ITINERARY, SHIP_DEPARTURE_TIME, SHIP_ONBOARD_TIME, STORAGE_KEY, CUSTOM_WAYPOINTS_KEY } from './constants';
+import { ItineraryItem, Coordinate, CustomWaypoint } from './types';
+
+// Definir tipo global para la función de borrado
+declare global {
+    interface Window {
+        cphDeleteWaypoint: (id: string) => void;
+    }
+}
 
 const App: React.FC = () => {
     const [activeTab, setActiveTab] = useState('timeline');
@@ -13,6 +20,7 @@ const App: React.FC = () => {
     const [userLocation, setUserLocation] = useState<Coordinate | null>(null);
     const [mapFocus, setMapFocus] = useState<Coordinate | null>(null);
     const [countdown, setCountdown] = useState('');
+    const [customWaypoints, setCustomWaypoints] = useState<CustomWaypoint[]>([]);
 
     useEffect(() => {
         const saved = localStorage.getItem(STORAGE_KEY);
@@ -29,6 +37,13 @@ const App: React.FC = () => {
             }
         } else {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_ITINERARY));
+        }
+
+        const savedWaypoints = localStorage.getItem(CUSTOM_WAYPOINTS_KEY);
+        if (savedWaypoints) {
+            try {
+                setCustomWaypoints(JSON.parse(savedWaypoints));
+            } catch (e) { console.error("Error loading waypoints", e); }
         }
     }, []);
 
@@ -83,6 +98,30 @@ const App: React.FC = () => {
         setActiveTab('map');
     };
 
+    const handleAddWaypoint = (lat: number, lng: number, name: string) => {
+        const newWp: CustomWaypoint = {
+            id: Date.now().toString(),
+            name,
+            lat,
+            lng,
+            created: Date.now()
+        };
+        const updated = [...customWaypoints, newWp];
+        setCustomWaypoints(updated);
+        localStorage.setItem(CUSTOM_WAYPOINTS_KEY, JSON.stringify(updated));
+    };
+
+    const handleDeleteWaypoint = (id: string) => {
+        const updated = customWaypoints.filter(wp => wp.id !== id);
+        setCustomWaypoints(updated);
+        localStorage.setItem(CUSTOM_WAYPOINTS_KEY, JSON.stringify(updated));
+    };
+
+    // Exponer la función de borrado globalmente para que Leaflet (HTML string) pueda acceder
+    useEffect(() => {
+        window.cphDeleteWaypoint = handleDeleteWaypoint;
+    }, [customWaypoints]);
+
     return (
         <div className="flex flex-col h-full bg-slate-50 font-sans">
             <header className="bg-fjord-900 text-white p-3 shadow-md z-20 flex justify-between items-center shrink-0">
@@ -100,7 +139,16 @@ const App: React.FC = () => {
 
             <main className="flex-1 overflow-hidden relative">
                 {activeTab === 'timeline' && <Timeline itinerary={itinerary} onToggleComplete={toggleComplete} onLocate={handleLocate} userLocation={userLocation} />}
-                {activeTab === 'map' && <MapComponent activities={itinerary} userLocation={userLocation} focusedLocation={mapFocus} />}
+                {activeTab === 'map' && 
+                    <MapComponent 
+                        activities={itinerary} 
+                        userLocation={userLocation} 
+                        focusedLocation={mapFocus}
+                        customWaypoints={customWaypoints}
+                        onAddWaypoint={handleAddWaypoint}
+                        onDeleteWaypoint={handleDeleteWaypoint}
+                    />
+                }
                 {activeTab === 'budget' && <Budget itinerary={itinerary} />}
                 {activeTab === 'guide' && <Guide userLocation={userLocation} itinerary={itinerary} />}
             </main>

@@ -60,3 +60,11 @@ export interface DailyForecast {
   min: number;
   code: number;
 }
+
+export interface CustomWaypoint {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  created: number;
+}
