@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
-import { Layers, MapPin } from 'lucide-react';
+import { Layers, MapPin, X, Save } from 'lucide-react';
 import { ItineraryItem, Coordinate, CustomWaypoint } from '../types';
 import { WALKING_TRACK_COORDS, WALKING_ROUTE_POIS } from '../constants';
 
@@ -9,7 +9,7 @@ interface MapComponentProps {
     userLocation: Coordinate | null;
     focusedLocation: Coordinate | null;
     customWaypoints: CustomWaypoint[];
-    onAddWaypoint: (lat: number, lng: number, name: string) => void;
+    onAddWaypoint: (lat: number, lng: number, name: string, description: string) => void;
     onDeleteWaypoint: (id: string) => void;
 }
 
@@ -25,6 +25,12 @@ const MapComponent: React.FC<MapComponentProps> = ({
     const tileLayerRef = useRef<L.TileLayer | null>(null);
     const [mapType, setMapType] = useState<'street' | 'satellite'>('street');
     const [isAddMode, setIsAddMode] = useState(false);
+    
+    // Estado para el Modal de creación
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [tempCoords, setTempCoords] = useState<L.LatLng | null>(null);
+    const [newWpName, setNewWpName] = useState('');
+    const [newWpDesc, setNewWpDesc] = useState('');
     
     // Referencia para usar en el listener del mapa sin problemas de closure
     const isAddModeRef = useRef(isAddMode);
@@ -43,11 +49,11 @@ const MapComponent: React.FC<MapComponentProps> = ({
             // Click listener para añadir puntos
             map.on('click', (e) => {
                 if (isAddModeRef.current) {
-                    const name = prompt("Nombre del punto de interés:");
-                    if (name && name.trim()) {
-                        onAddWaypoint(e.latlng.lat, e.latlng.lng, name.trim());
-                        setIsAddMode(false); // Desactivar modo añadir tras crear
-                    }
+                    setTempCoords(e.latlng);
+                    setNewWpName('');
+                    setNewWpDesc('');
+                    setShowAddModal(true);
+                    setIsAddMode(false); // Salir del modo "añadir" al capturar el punto
                 }
             });
         }
@@ -140,9 +146,10 @@ const MapComponent: React.FC<MapComponentProps> = ({
              L.marker([wp.lat, wp.lng], { icon: customWPIcon })
                 .addTo(map)
                 .bindPopup(`
-                    <div class="text-center">
-                        <span class="font-bold text-amber-600 block mb-2">${wp.name}</span>
-                        <button onclick="window.cphDeleteWaypoint('${wp.id}')" class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded border border-red-200">
+                    <div class="text-center min-w-[150px]">
+                        <span class="font-bold text-amber-600 block text-sm mb-1">${wp.name}</span>
+                        ${wp.description ? `<p class="text-xs text-gray-600 mb-2 italic border-b pb-1">${wp.description}</p>` : ''}
+                        <button onclick="window.cphDeleteWaypoint('${wp.id}')" class="text-[10px] uppercase font-bold bg-red-50 text-red-600 px-2 py-1 rounded border border-red-100 hover:bg-red-100 transition-colors">
                             Eliminar
                         </button>
                     </div>
@@ -163,6 +170,13 @@ const MapComponent: React.FC<MapComponentProps> = ({
         }
 
     }, [activities, userLocation, focusedLocation, customWaypoints]);
+
+    const handleSaveWaypoint = () => {
+        if (newWpName && newWpName.trim() && tempCoords) {
+            onAddWaypoint(tempCoords.lat, tempCoords.lng, newWpName.trim(), newWpDesc.trim());
+            setShowAddModal(false);
+        }
+    };
 
     return (
         <div className={`relative w-full h-full ${isAddMode ? 'cursor-crosshair' : ''}`}>
@@ -185,6 +199,48 @@ const MapComponent: React.FC<MapComponentProps> = ({
                     {isAddMode && <div className="absolute right-12 bg-amber-500 text-white text-xs px-2 py-1 rounded font-bold whitespace-nowrap shadow-md">Pulsa en el mapa</div>}
                 </button>
             </div>
+
+            {/* Modal para añadir Waypoint */}
+            {showAddModal && (
+                <div className="absolute inset-0 z-[1000] bg-black/40 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform scale-100">
+                        <div className="bg-amber-500 px-4 py-3 flex justify-between items-center text-white">
+                            <h3 className="font-bold flex items-center"><MapPin className="mr-2 fill-current" size={18}/> Nuevo Punto</h3>
+                            <button onClick={() => setShowAddModal(false)}><X size={20} /></button>
+                        </div>
+                        <div className="p-4 space-y-3">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre</label>
+                                <input 
+                                    autoFocus
+                                    type="text" 
+                                    className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                                    placeholder="Ej: Restaurante, Baño, Foto..."
+                                    value={newWpName}
+                                    onChange={(e) => setNewWpName(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Descripción (Opcional)</label>
+                                <textarea 
+                                    className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none resize-none"
+                                    rows={3}
+                                    placeholder="Detalles adicionales..."
+                                    value={newWpDesc}
+                                    onChange={(e) => setNewWpDesc(e.target.value)}
+                                />
+                            </div>
+                            <button 
+                                onClick={handleSaveWaypoint}
+                                disabled={!newWpName.trim()}
+                                className="w-full bg-amber-500 text-white font-bold py-3 rounded-xl flex items-center justify-center hover:bg-amber-600 active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100 mt-2"
+                            >
+                                <Save size={18} className="mr-2" /> Guardar Marcador
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

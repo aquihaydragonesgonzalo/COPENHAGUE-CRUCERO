@@ -98,10 +98,11 @@ const App: React.FC = () => {
         setActiveTab('map');
     };
 
-    const handleAddWaypoint = (lat: number, lng: number, name: string) => {
+    const handleAddWaypoint = (lat: number, lng: number, name: string, description: string) => {
         const newWp: CustomWaypoint = {
             id: Date.now().toString(),
             name,
+            description,
             lat,
             lng,
             created: Date.now()
