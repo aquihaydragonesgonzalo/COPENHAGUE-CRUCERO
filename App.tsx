@@ -5,7 +5,7 @@ import MapComponent from './components/MapComponent';
 import Budget from './components/Budget';
 import Guide from './components/Guide';
 import { INITIAL_ITINERARY, SHIP_DEPARTURE_TIME, SHIP_ONBOARD_TIME, STORAGE_KEY, CUSTOM_WAYPOINTS_KEY } from './constants';
-import { ItineraryItem, Coordinate, CustomWaypoint } from './types';
+import { ItineraryItem, Coordinate, CustomWaypoint, HourlyForecast } from './types';
 
 // Definir tipo global para la función de borrado
 declare global {
@@ -21,6 +21,7 @@ const App: React.FC = () => {
     const [mapFocus, setMapFocus] = useState<Coordinate | null>(null);
     const [countdown, setCountdown] = useState('');
     const [customWaypoints, setCustomWaypoints] = useState<CustomWaypoint[]>([]);
+    const [weatherForecast, setWeatherForecast] = useState<HourlyForecast[]>([]);
 
     useEffect(() => {
         const saved = localStorage.getItem(STORAGE_KEY);
@@ -45,6 +46,23 @@ const App: React.FC = () => {
                 setCustomWaypoints(JSON.parse(savedWaypoints));
             } catch (e) { console.error("Error loading waypoints", e); }
         }
+
+        // Obtener clima
+        fetch('https://api.open-meteo.com/v1/forecast?latitude=55.6761&longitude=12.5683&hourly=temperature_2m,precipitation_probability,weather_code&timezone=Europe%2FBerlin&forecast_days=1')
+            .then(res => res.json())
+            .then(data => {
+                if (data.hourly && data.hourly.time) {
+                    const hours = data.hourly.time.map((t: string, i: number) => ({
+                        time: t,
+                        temp: data.hourly.temperature_2m[i],
+                        rain: data.hourly.precipitation_probability[i],
+                        code: data.hourly.weather_code[i]
+                    }));
+                    setWeatherForecast(hours);
+                }
+            })
+            .catch(err => console.error("Weather fetch failed", err));
+
     }, []);
 
     useEffect(() => {
@@ -139,7 +157,15 @@ const App: React.FC = () => {
             </header>
 
             <main className="flex-1 overflow-hidden relative">
-                {activeTab === 'timeline' && <Timeline itinerary={itinerary} onToggleComplete={toggleComplete} onLocate={handleLocate} userLocation={userLocation} />}
+                {activeTab === 'timeline' && 
+                    <Timeline 
+                        itinerary={itinerary} 
+                        onToggleComplete={toggleComplete} 
+                        onLocate={handleLocate} 
+                        userLocation={userLocation}
+                        weather={weatherForecast}
+                    />
+                }
                 {activeTab === 'map' && 
                     <MapComponent 
                         activities={itinerary} 

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { 
     Clock, MapPin, Map as MapIcon, Ticket, Headphones, Play, Square,
-    CheckCircle2, Circle, AlertTriangle, Instagram, Navigation
+    CheckCircle2, Circle, AlertTriangle, Instagram, Navigation,
+    Sun, Cloud, CloudRain, CloudLightning, Snowflake, CloudDrizzle
 } from 'lucide-react';
-import { ItineraryItem, Coordinate } from '../types';
+import { ItineraryItem, Coordinate, HourlyForecast } from '../types';
 import { AUDIO_PLAYLISTS } from '../constants';
 import { calculateDuration, calculateGap, calculateDistance, calculateBearing } from '../utils';
 import SharedFooter from './SharedFooter';
@@ -13,9 +14,10 @@ interface TimelineProps {
     onToggleComplete: (id: string) => void;
     onLocate: (coords: Coordinate, endCoords?: Coordinate) => void;
     userLocation: Coordinate | null;
+    weather: HourlyForecast[];
 }
 
-const Timeline: React.FC<TimelineProps> = ({ itinerary, onToggleComplete, onLocate, userLocation }) => {
+const Timeline: React.FC<TimelineProps> = ({ itinerary, onToggleComplete, onLocate, userLocation, weather }) => {
     const now = new Date();
     const currentHours = now.getHours();
     const currentMinutes = now.getMinutes();
@@ -25,6 +27,18 @@ const Timeline: React.FC<TimelineProps> = ({ itinerary, onToggleComplete, onLoca
     const [showAudioModal, setShowAudioModal] = useState(false);
     const [currentPlaylist, setCurrentPlaylist] = useState<any[]>([]);
     const [isSpeaking, setIsSpeaking] = useState(false);
+
+    const getWeatherIcon = (code: number | undefined) => {
+        if (code === undefined) return null;
+        // WMO Weather interpretation codes (WW)
+        if (code <= 3) return <Sun size={14} className="text-amber-500" />;
+        if (code <= 48) return <Cloud size={14} className="text-slate-400" />;
+        if (code <= 67) return <CloudDrizzle size={14} className="text-blue-400" />;
+        if (code <= 77) return <Snowflake size={14} className="text-cyan-300" />;
+        if (code <= 86) return <CloudRain size={14} className="text-blue-600" />;
+        if (code <= 99) return <CloudLightning size={14} className="text-purple-500" />;
+        return <Sun size={14} className="text-slate-400" />;
+    };
 
     const isCurrent = (act: ItineraryItem) => {
         const [startH, startM] = act.startTime.split(':').map(Number);
@@ -43,6 +57,14 @@ const Timeline: React.FC<TimelineProps> = ({ itinerary, onToggleComplete, onLoca
         const total = endVal - startVal;
         const elapsed = currentTimeVal - startVal;
         return Math.min(100, Math.max(0, (elapsed / total) * 100));
+    };
+
+    const getActivityWeather = (startTime: string) => {
+        if (!weather || weather.length === 0) return null;
+        // La API devuelve formato ISO "YYYY-MM-DDTHH:MM"
+        // Buscamos la hora que coincida con el inicio de la actividad
+        const hourPrefix = startTime.split(':')[0]; // "08" de "08:30"
+        return weather.find(w => w.time.split('T')[1].startsWith(hourPrefix));
     };
 
     const speakText = (text: string) => {
@@ -75,6 +97,8 @@ const Timeline: React.FC<TimelineProps> = ({ itinerary, onToggleComplete, onLoca
                     const prevAct = index > 0 ? itinerary[index - 1] : null;
                     const gap = prevAct ? calculateGap(prevAct.endTime, act.startTime) : 0;
                     
+                    const activityWeather = getActivityWeather(act.startTime);
+
                     let distStr = "";
                     let bearing = 0;
                     
@@ -125,6 +149,13 @@ const Timeline: React.FC<TimelineProps> = ({ itinerary, onToggleComplete, onLoca
                                                 <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold ${active ? 'bg-sunset-500 text-white' : 'bg-fjord-100 text-fjord-700'}`}>
                                                     {act.startTime} - {act.endTime}
                                                 </span>
+                                                {/* Icono del clima y Temperatura */}
+                                                {activityWeather && (
+                                                    <span className="bg-blue-50 border border-blue-100 text-blue-800 px-1.5 py-0.5 rounded flex items-center gap-1 text-[10px] font-bold">
+                                                        {getWeatherIcon(activityWeather.code)}
+                                                        {Math.round(activityWeather.temp)}°
+                                                    </span>
+                                                )}
                                                 <span className="text-xs text-slate-500 font-medium bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
                                                     {calculateDuration(act.startTime, act.endTime)}
                                                 </span>
