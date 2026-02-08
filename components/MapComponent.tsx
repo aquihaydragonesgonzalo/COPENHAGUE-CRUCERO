@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
-import { Layers, MapPin, X, Save } from 'lucide-react';
+import { Layers, MapPin, X, Save, Search } from 'lucide-react';
 import { ItineraryItem, Coordinate, CustomWaypoint } from '../types';
 import { WALKING_TRACK_COORDS, WALKING_ROUTE_POIS } from '../constants';
 
@@ -23,9 +23,16 @@ const MapComponent: React.FC<MapComponentProps> = ({
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstance = useRef<L.Map | null>(null);
     const tileLayerRef = useRef<L.TileLayer | null>(null);
+    const searchMarkerRef = useRef<L.Marker | null>(null);
+
     const [mapType, setMapType] = useState<'street' | 'satellite'>('street');
     const [isAddMode, setIsAddMode] = useState(false);
     
+    // Estados para búsqueda
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+
     // Estado para el Modal de creación
     const [showAddModal, setShowAddModal] = useState(false);
     const [tempCoords, setTempCoords] = useState<L.LatLng | null>(null);
@@ -102,9 +109,11 @@ const MapComponent: React.FC<MapComponentProps> = ({
             iconSize: [14, 14]
         });
 
-        // Limpiar capas excepto el mapa base
+        // Limpiar capas excepto el mapa base y el marcador de búsqueda
         map.eachLayer((layer) => {
-            if(layer instanceof L.Marker || layer instanceof L.Polyline) map.removeLayer(layer);
+            if((layer instanceof L.Marker || layer instanceof L.Polyline) && layer !== searchMarkerRef.current) {
+                map.removeLayer(layer);
+            }
         });
 
         if(WALKING_TRACK_COORDS && WALKING_TRACK_COORDS.length > 0) {
@@ -178,10 +187,111 @@ const MapComponent: React.FC<MapComponentProps> = ({
         }
     };
 
+    const handleSearch = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!searchQuery.trim()) return;
+
+        setIsSearching(true);
+        setSearchResults([]);
+
+        try {
+            // Buscamos en OpenStreetMap limitando a Dinamarca para mejorar relevancia
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&countrycodes=dk&limit=5&addressdetails=1`);
+            const data = await response.json();
+            setSearchResults(data);
+        } catch (error) {
+            console.error("Error buscando:", error);
+        } finally {
+            setIsSearching(false);
+        }
+    };
+
+    const handleSelectResult = (result: any) => {
+        if (!mapInstance.current) return;
+
+        const lat = parseFloat(result.lat);
+        const lng = parseFloat(result.lon);
+        const displayName = result.display_name.split(',')[0]; // Tomar solo la primera parte del nombre
+
+        // Mover mapa
+        mapInstance.current.flyTo([lat, lng], 16);
+
+        // Limpiar marcador de búsqueda anterior
+        if (searchMarkerRef.current) {
+            mapInstance.current.removeLayer(searchMarkerRef.current);
+        }
+
+        // Crear icono distintivo para búsqueda (Rojo grande)
+        const searchIcon = L.divIcon({
+            className: 'search-pin',
+            html: '<div style="background-color:#ef4444;width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center;"><div style="width:6px; height:6px; background:white; border-radius:50%;"></div></div>',
+            iconSize: [20, 20],
+            popupAnchor: [0, -10]
+        });
+
+        // Añadir nuevo marcador
+        const marker = L.marker([lat, lng], { icon: searchIcon })
+            .addTo(mapInstance.current)
+            .bindPopup(`<div class="text-center font-bold text-red-600">${displayName}</div>`)
+            .openPopup();
+        
+        searchMarkerRef.current = marker;
+
+        // Limpiar UI
+        setSearchResults([]);
+        setSearchQuery('');
+    };
+
     return (
         <div className={`relative w-full h-full ${isAddMode ? 'cursor-crosshair' : ''}`}>
             <div ref={mapRef} className="w-full h-full z-0" />
             
+            {/* Barra de Búsqueda */}
+            <div className="absolute top-4 left-4 right-16 z-[400] max-w-sm">
+                <form onSubmit={handleSearch} className="relative shadow-lg rounded-xl">
+                    <input 
+                        type="text" 
+                        placeholder="Buscar lugar en Copenhague..." 
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white/95 backdrop-blur text-sm"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                    <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
+                    {searchQuery && (
+                        <button 
+                            type="button" 
+                            onClick={() => { setSearchQuery(''); setSearchResults([]); }}
+                            className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+                        >
+                            <X size={18} />
+                        </button>
+                    )}
+                </form>
+
+                {/* Resultados de búsqueda */}
+                {searchResults.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden max-h-60 overflow-y-auto">
+                        {searchResults.map((result, idx) => (
+                            <button 
+                                key={idx}
+                                onClick={() => handleSelectResult(result)}
+                                className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-50 last:border-0 text-sm flex items-start"
+                            >
+                                <MapPin size={16} className="mt-0.5 mr-2 text-slate-400 shrink-0" />
+                                <span className="line-clamp-2">{result.display_name}</span>
+                            </button>
+                        ))}
+                    </div>
+                )}
+                
+                {isSearching && searchResults.length === 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white p-3 rounded-xl shadow text-center text-xs text-slate-500">
+                        Buscando...
+                    </div>
+                )}
+            </div>
+
+            {/* Controles del Mapa */}
             <div className="absolute top-4 right-4 z-[400] flex flex-col gap-2">
                 <button 
                     onClick={() => setMapType(prev => prev === 'street' ? 'satellite' : 'street')}
